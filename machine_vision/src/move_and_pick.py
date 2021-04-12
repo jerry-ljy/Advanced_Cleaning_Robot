@@ -3,8 +3,9 @@
 
 import rospy
 from geometry_msgs.msg import Twist
-from yolov3_pytorch_ros.msg import BoundingBoxes
-from yolov3_pytorch_ros.msg import BoundingBox
+from geometry_msgs.msg import PoseStamped
+from machine_vision.msg import BoundingBoxes
+from machine_vision.msg import BoundingBox
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import LaserScan
 import threading
@@ -27,8 +28,10 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 ###### methods for detect objects#######
 move='s'
-flag=True
+move_flag=True
+detect_flag=False
 laser=0
+next_goal = PoseStamped()
 
 WAFFLE_MAX_LIN_VEL = 0.26
 WAFFLE_MAX_ANG_VEL = 1.82
@@ -83,27 +86,40 @@ def thread_job():
     rospy.spin()
 
 def detect_callback(data):
+    global move
+    global detect_flag
     if len(data.bounding_boxes)!=0:
         object = data.bounding_boxes[0]
-        position = (object.xmin+object.xmax)/2
-        print("object center:")
-        print(position)
-        global move
-        if position<450:
-            move='l'
-        elif position>460:
-            move='r'
+        if(object.Class!='paper'):
+            detect_flag=True
+            position = (object.xmin+object.xmax)/2
+            print(object.Class, object.probability)
+            # print("object center:")
+            # print(position)
+            if position<450:
+                move='l'
+            elif position>460:
+                move='r'
+            else:
+                move='f'
         else:
-            move='f'
+            move='s'
     else:
         move='s'
     
 def laser_callback(data):
-    global flag
+    global move_flag
     global laser
     laser = data.ranges[0]
     if(data.ranges[0]<=0.2):
-        flag=False
+        move_flag=False
+    else:
+        move_flag=True
+
+def next_goal_callback(data):
+    print(data)
+    global next_goal
+    next_goal = data
 #############################################
 
 ##########methods for picking objects#########
@@ -328,63 +344,69 @@ def place():
 if __name__ == '__main__':    
     rospy.init_node('move_and_pick')
     pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+    goal_pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1000)
 
     add_thread=threading.Thread(target=thread_job)
     add_thread.start()
 
     rospy.Subscriber("/detected_objects_in_image", BoundingBoxes ,detect_callback, queue_size= 1)
     rospy.Subscriber("/scan", LaserScan, laser_callback)
+    rospy.Subscriber("/clean_robot/goal", PoseStamped, next_goal_callback)
     while not rospy.is_shutdown():
-        print(laser)
-        if flag:
-            if move=='l':
-                print('turn left')
-                target_angular_vel = checkAngularLimitVelocity(target_angular_vel + ANG_VEL_STEP_SIZE)
-            elif move=='r':
-                print('turn right')
-                target_angular_vel = checkAngularLimitVelocity(target_angular_vel - ANG_VEL_STEP_SIZE)
+        # print(laser)
+        if detect_flag:
+            if move_flag:
+                if move=='l':
+                    print('turn left')
+                    target_angular_vel = checkAngularLimitVelocity(target_angular_vel + ANG_VEL_STEP_SIZE)
+                elif move=='r':
+                    print('turn right')
+                    target_angular_vel = checkAngularLimitVelocity(target_angular_vel - ANG_VEL_STEP_SIZE)
 
-            elif move=='f':
-                print('go forward!')
-                target_linear_vel = checkLinearLimitVelocity(target_linear_vel + LIN_VEL_STEP_SIZE)
-                # break       
+                elif move=='f':
+                    print('go forward!')
+                    target_linear_vel = checkLinearLimitVelocity(target_linear_vel + LIN_VEL_STEP_SIZE)
+                    # break       
+                else:
+                    print('stop')
+                    target_linear_vel   = 0.0
+                    control_linear_vel  = 0.0
+                    target_angular_vel  = 0.0
+                    control_angular_vel = 0.0 
+                try:
+                    twist = Twist()
+                    control_linear_vel = makeSimpleProfile(control_linear_vel, target_linear_vel, (LIN_VEL_STEP_SIZE/2.0))
+                    twist.linear.x = control_linear_vel; twist.linear.y = 0.0; twist.linear.z = 0.0
+
+                    control_angular_vel = makeSimpleProfile(control_angular_vel, target_angular_vel, (ANG_VEL_STEP_SIZE/2.0))
+                    twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = control_angular_vel
+                    
+                    rospy.sleep(2)
+                    pub.publish(twist)
+
+                    ################################################stop###############################
+                    target_linear_vel   = 0.0
+                    control_linear_vel  = 0.0
+                    target_angular_vel  = 0.0
+                    control_angular_vel = 0.0
+
+                    twist = Twist()
+                    control_linear_vel = makeSimpleProfile(control_linear_vel, target_linear_vel, (LIN_VEL_STEP_SIZE/2.0))
+                    twist.linear.x = control_linear_vel; twist.linear.y = 0.0; twist.linear.z = 0.0
+
+                    control_angular_vel = makeSimpleProfile(control_angular_vel, target_angular_vel, (ANG_VEL_STEP_SIZE/2.0))
+                    twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = control_angular_vel
+                    
+                    rospy.sleep(1)
+                    pub.publish(twist)
+                except:
+                    print(e)
             else:
-                print('stop')
-                target_linear_vel   = 0.0
-                control_linear_vel  = 0.0
-                target_angular_vel  = 0.0
-                control_angular_vel = 0.0 
-            try:
-                twist = Twist()
-                control_linear_vel = makeSimpleProfile(control_linear_vel, target_linear_vel, (LIN_VEL_STEP_SIZE/2.0))
-                twist.linear.x = control_linear_vel; twist.linear.y = 0.0; twist.linear.z = 0.0
-
-                control_angular_vel = makeSimpleProfile(control_angular_vel, target_angular_vel, (ANG_VEL_STEP_SIZE/2.0))
-                twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = control_angular_vel
-                
-                rospy.sleep(2)
-                pub.publish(twist)
-
-                ################################################stop###############################
-                target_linear_vel   = 0.0
-                control_linear_vel  = 0.0
-                target_angular_vel  = 0.0
-                control_angular_vel = 0.0
-
-                twist = Twist()
-                control_linear_vel = makeSimpleProfile(control_linear_vel, target_linear_vel, (LIN_VEL_STEP_SIZE/2.0))
-                twist.linear.x = control_linear_vel; twist.linear.y = 0.0; twist.linear.z = 0.0
-
-                control_angular_vel = makeSimpleProfile(control_angular_vel, target_angular_vel, (ANG_VEL_STEP_SIZE/2.0))
-                twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = control_angular_vel
-                
-                rospy.sleep(1)
-                pub.publish(twist)
-            except:
-                print(e)
+                print("start picking")
+                pick()
+                detect_flag=False
         else:
-            print("start picking")
-            pick()
-    
+            # print(next_goal)
+            goal_pub.publish(next_goal)
 
 
