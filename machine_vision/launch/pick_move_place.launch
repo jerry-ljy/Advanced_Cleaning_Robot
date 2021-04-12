@@ -5,12 +5,12 @@
   <arg name="debug" default="false" />
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
   <arg     if="$(arg debug)" name="launch_prefix"
-	   value="gdb -x $(find turtlebot3_manipulation_moveit_config)/launch/gdb_settings.gdb --ex run --args" />
+	   value="gdb -x $(find turtlebot3_manipulation_moveit_config)/launch/gdb_settings.gdb ex run args" />
 
   <!-- Verbose Mode Option -->
   <arg name="info" default="$(arg debug)" />
   <arg unless="$(arg info)" name="command_args" value="" />
-  <arg     if="$(arg info)" name="command_args" value="--debug" />
+  <arg     if="$(arg info)" name="command_args" value="debug" />
 
   <!-- move_group settings -->
   <arg name="pipeline" default="ompl" />
@@ -23,20 +23,20 @@
   <arg name="capabilities" default=""/>
   <arg name="disable_capabilities" default=""/>
   <!-- load these non-default MoveGroup capabilities (space seperated) -->
-  <!--
-  <arg name="capabilities" value="
+  
+  <!-- <arg name="capabilities" value="
                 a_package/AwsomeMotionPlanningCapability
                 another_package/GraspPlanningPipeline
-                " />
-  -->
+                " /> -->
+  
 
   <!-- inhibit these default MoveGroup capabilities (space seperated) -->
-  <!--
-  <arg name="disable_capabilities" value="
+  
+  <!-- <arg name="disable_capabilities" value="
                 move_group/MoveGroupKinematicsService
                 move_group/ClearOctomapService
-                " />
-  -->
+                " /> -->
+  
 
   <arg name="load_robot_description" default="true" />
   <!-- load URDF, SRDF and joint_limits configuration -->
@@ -84,13 +84,13 @@
 
   <!-- Configuring Navigation Parameters -->
   <!-- Arguments -->
-  <arg name="model" default="waffle_pi" doc="model type [burger, waffle, waffle_pi]"/>
+  <!-- <arg name="model" default="waffle_pi" doc="model type [burger, waffle, waffle_pi]"/>
   <arg name="map_file" default="$(find turtlebot3_manipulation_navigation)/maps/map.yaml"/>
   <arg name="open_rviz" default="true"/>
-  <arg name="move_forward_only" default="false"/>
+  <arg name="move_forward_only" default="false"/> -->
 
   <!-- Turtlebot3 -->
-  <arg name="urdf_file" default="$(find xacro)/xacro --inorder '$(find turtlebot3_manipulation_description)/urdf/turtlebot3_manipulation_robot.urdf.xacro'" />
+  <!-- <arg name="urdf_file" default="$(find xacro)/xacro inorder '$(find turtlebot3_manipulation_description)/urdf/turtlebot3_manipulation_robot.urdf.xacro'" />
   <param name="robot_description" command="$(arg urdf_file)" />
 
   <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
@@ -99,23 +99,23 @@
 
   <node pkg="laser_filters" type="scan_to_scan_filter_chain" name="laser_filter" output="screen" >
     <rosparam command="load" file="$(find turtlebot3_manipulation_slam)/config/scan_data_filter.yaml" />
-  </node>  
+  </node> -->  
 
   <!-- Map server -->
-  <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)"/>
+  <!-- <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)"/> -->
 
   <!-- AMCL -->
-  <include file="$(find turtlebot3_manipulation_navigation)/launch/amcl.launch">
+  <!-- <include file="$(find turtlebot3_manipulation_navigation)/launch/amcl.launch">
     <arg name="initial_pose_x"  value="0.0" />
     <arg name="initial_pose_y"  value="0.0" />
     <arg name="initial_pose_a"  value="1.5708" />
-  </include>
+  </include> -->
 
   <!-- move_base -->
-  <include file="$(find turtlebot3_manipulation_navigation)/launch/move_base.launch">
+  <!-- <include file="$(find turtlebot3_manipulation_navigation)/launch/move_base.launch">
     <arg name="model" value="$(arg model)" />
     <arg name="move_forward_only" value="$(arg move_forward_only)"/>
-  </include>
+  </include> -->
 
   <!-- rviz -->
   <!-- <group if="$(arg open_rviz)"> 
@@ -127,6 +127,6 @@
 <!--   <node pkg="autonomous" name="init_pos" type="initial_pose.py" args="$(arg map_file)"/> -->
 
   <!-- pick_move_place Node -->
-  <node pkg="machine_vision" name="move_and_pick" type="move_and_pick.py" />
+  <node pkg="machine_vision" name="move_and_pick" output="screen" type="move_and_pick.py" />
 
 </launch>

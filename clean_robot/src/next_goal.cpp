@@ -146,7 +146,8 @@ int main(int argc, char *argv[])
   ros::Subscriber sub1 = next_goal.subscribe("/odom", 1000, pose_callback);
   ros::Subscriber sub2 = next_goal.subscribe("/path_planning_node/cleaning_plan_nodehandle/cleaning_path", 1000, path_callback);
 
-  ros::Publisher pub1 = next_goal.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1000);
+  // ros::Publisher pub1 = next_goal.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1000);
+  ros::Publisher pub1 = next_goal.advertise<geometry_msgs::PoseStamped>("/clean_robot/goal", 1000);
   pub_passed_path = next_goal.advertise<nav_msgs::Path>("/clean_robot/passed_path", 1000);
 
   ros::Rate loop_rate(10);
@@ -216,6 +217,7 @@ int main(int argc, char *argv[])
         cout << " x = " << planned_path.Path[count].x << " y = " << planned_path.Path[count].y << endl;
 
         goal_reached = true;
+        cout << "publishing" << endl;
         pub1.publish(goal_msgs);
       }
       cout << x_current << " " << y_current << endl;

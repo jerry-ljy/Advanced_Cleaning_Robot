@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
+    
+
     <!-- Camera topic and weights, config and classes files -->
     <arg name="image_topic"	                default="/camera/rgb/image_raw"/>
     <arg name="weights_name"	            default="yolov3-garb.weights"/>
@@ -25,4 +27,6 @@
         <param name="detections_image_topic"    value="$(arg detections_image_topic)"/>
         <param name="confidence"                value="$(arg confidence)"/>
     </node>
+
+    <!-- <node pkg="machine_vision" name="move_and_pick" output="screen" type="move_and_pick.py" /> -->
 </launch>
