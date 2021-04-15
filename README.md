@@ -1,8 +1,8 @@
 # Advanced Cleaning Robot -- Robotics Project
 A clean robot which can: slam, path planning and pick up garbage by using machine vision.
 
-### How to use
-#### Install
+## How to use
+### Install
 for twist mux:
 > sudo apt install ros-${ROS_DISTRO}-twist-mux
 
@@ -10,11 +10,13 @@ for twist mux:
 for path planning:
 > sudo apt install ros-${ROS_DISTRO}-turtlebot3 ros-${ROS_DISTRO}-navigation ros-${ROS_DISTRO}-dwa-local-planner
 
-#### Config
+### Config
 chang the topics in 
 > /opt/ros/${ROS_DISTRO}/share/twist_mux/config/twist_mux_topics.yaml
+
 to
-'''
+
+```
 topics:
 -
   name    : clean_robot
@@ -26,9 +28,9 @@ topics:
   topic   : detector_vel
   timeout : 0.5
   priority: 250
-'''
+```
 
-#### Start Running
+### Start Running
 run twist mux:
 > roslaunch twist_mux twist_mux.launch
 
