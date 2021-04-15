@@ -12,6 +12,7 @@
 #include <tf/transform_listener.h>
 #include <iostream>
 #include <fstream>
+#include "std_msgs/Bool.h"
 
 using namespace std;
 using namespace tf;
@@ -136,6 +137,12 @@ void path_callback(const nav_msgs::Path &path)
   }
 }
 
+
+bool detected=false;
+void detector_callback(const std_msgs::Bool::ConstPtr &flag){
+  detected=flag->data;
+}
+
 // int **count_antonin(char *)
 
 int main(int argc, char *argv[])
@@ -145,14 +152,16 @@ int main(int argc, char *argv[])
   ros::NodeHandle next_goal;
   ros::Subscriber sub1 = next_goal.subscribe("/odom", 1000, pose_callback);
   ros::Subscriber sub2 = next_goal.subscribe("/path_planning_node/cleaning_plan_nodehandle/cleaning_path", 1000, path_callback);
+  ros::Subscriber sub3 = next_goal.subscribe("/detector/flag", 1, detector_callback);
 
-  // ros::Publisher pub1 = next_goal.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1000);
-  ros::Publisher pub1 = next_goal.advertise<geometry_msgs::PoseStamped>("/clean_robot/goal", 1000);
+  ros::Publisher pub1 = next_goal.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1000);
+  // ros::Publisher pub1 = next_goal.advertise<geometry_msgs::PoseStamped>("/clean_robot/goal", 1000);
   pub_passed_path = next_goal.advertise<nav_msgs::Path>("/clean_robot/passed_path", 1000);
 
   ros::Rate loop_rate(10);
 
   geometry_msgs::PoseStamped goal_msgs;
+
   int count = 0;
   double angle;
   bool goal_reached = false;
@@ -176,13 +185,19 @@ int main(int argc, char *argv[])
     cout << " count : " << count << endl;
     if (!planned_path.Path.empty())
     {
+      ////clear goal ///
+
+      // if(!detected){
+      	
+      // }
       //当前距离达到了
       if (sqrt(pow(x_current - planned_path.Path[count].x, 2) + pow(y_current - planned_path.Path[count].y, 2)) <= normeNextGoal)
       {
         count++;
         goal_reached = false;
       }
-      if (goal_reached == false)
+
+      if (!detected && goal_reached == false)
       {
         goal_msgs.header.frame_id = "odom";
         goal_msgs.header.stamp = ros::Time::now();

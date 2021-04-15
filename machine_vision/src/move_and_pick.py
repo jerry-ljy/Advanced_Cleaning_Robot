@@ -2,6 +2,7 @@
 
 
 import rospy
+from std_msgs.msg import Bool
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped
 from machine_vision.msg import BoundingBoxes
@@ -30,6 +31,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 move='s'
 move_flag=True
 detect_flag=False
+detected_flag = Bool()
 laser=0
 next_goal = PoseStamped()
 
@@ -44,6 +46,8 @@ target_linear_vel   = 0.0
 target_angular_vel  = 0.0
 control_linear_vel  = 0.0
 control_angular_vel = 0.0
+
+detected_pub = rospy.Publisher('/detector/flag', Bool, queue_size=1)
 
 e = 'Error...' 
 """
@@ -88,14 +92,15 @@ def thread_job():
 def detect_callback(data):
     global move
     global detect_flag
+    global detected_flag
     if len(data.bounding_boxes)!=0:
         object = data.bounding_boxes[0]
-        if(object.Class!='paper'):
+        if object.Class!='paper':
             detect_flag=True
             position = (object.xmin+object.xmax)/2
             print(object.Class, object.probability)
-            # print("object center:")
-            # print(position)
+                # print("object center:")
+                # print(position)
             if position<450:
                 move='l'
             elif position>460:
@@ -106,6 +111,9 @@ def detect_callback(data):
             move='s'
     else:
         move='s'
+    detected_flag.data=detect_flag
+    detected_pub.publish(detected_flag)
+
     
 def laser_callback(data):
     global move_flag
@@ -116,10 +124,10 @@ def laser_callback(data):
     else:
         move_flag=True
 
-def next_goal_callback(data):
-    print(data)
-    global next_goal
-    next_goal = data
+# def next_goal_callback(data):
+#     print(data)
+#     global next_goal
+#     next_goal = data.data
 #############################################
 
 ##########methods for picking objects#########
@@ -343,18 +351,19 @@ def place():
 ##############################################
 if __name__ == '__main__':    
     rospy.init_node('move_and_pick')
-    pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-    goal_pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1000)
+    pub = rospy.Publisher('/detector_vel', Twist, queue_size=10)
+    # goal_pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1000)
 
     add_thread=threading.Thread(target=thread_job)
     add_thread.start()
 
     rospy.Subscriber("/detected_objects_in_image", BoundingBoxes ,detect_callback, queue_size= 1)
-    rospy.Subscriber("/scan", LaserScan, laser_callback)
-    rospy.Subscriber("/clean_robot/goal", PoseStamped, next_goal_callback)
+    rospy.Subscriber("/scan", LaserScan, laser_callback, queue_size=1)
+    # rospy.Subscriber("/clean_robot/goal", PoseStamped, next_goal_callback)
     while not rospy.is_shutdown():
-        # print(laser)
+        print("detect:",detect_flag)
         if detect_flag:
+            print("move:",move_flag)
             if move_flag:
                 if move=='l':
                     print('turn left')
@@ -397,7 +406,7 @@ if __name__ == '__main__':
                     control_angular_vel = makeSimpleProfile(control_angular_vel, target_angular_vel, (ANG_VEL_STEP_SIZE/2.0))
                     twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = control_angular_vel
                     
-                    rospy.sleep(1)
+                    rospy.sleep(3)
                     pub.publish(twist)
                 except:
                     print(e)
@@ -406,7 +415,8 @@ if __name__ == '__main__':
                 pick()
                 detect_flag=False
         else:
+            pass
             # print(next_goal)
-            goal_pub.publish(next_goal)
+            # goal_pub.publish(next_goal)
 
 
